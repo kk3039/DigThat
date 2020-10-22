@@ -1,5 +1,9 @@
 import sys
 import getopt
+import json
+import socket
+
+DATA_SIZE = 4096
 
 
 class Error(Exception):
@@ -11,7 +15,16 @@ class InputError(Error):
     def __init__(self, expression, message):
         self.expression = expression
         self.message = message
-# n x n??
+
+
+class Detector:
+    def __init__(self, name):
+        self.name = name
+        self.num_probe = 0
+        self.score = sys.maxint
+
+    def update_probes(self, num_probe):
+        self.num_probe += num_probe
 
 
 class Game:
@@ -34,6 +47,12 @@ class Game:
             [0 for _ in range(self.num_grid+1)] for _ in range(self.num_grid+1)]
         self.intersection_neighbors = {}
 
+    def set_player(self, name):
+        self.detector = Detector(name)
+
+    def use_probes(self, num_probes):
+        self.detector.update_probes(num_probes)
+
     def load_tunnel(self):
         f = open("tunnel", "r")
         prev = None
@@ -45,7 +64,7 @@ class Game:
             x = int(str_x)
             y = int(str_y)
             route.append((x, y))
-            print(x, y)
+
             if prev is not None and not abs(prev[0] - x) ^ abs(prev[1] - y):
                 raise InputError((x, y), "tunnel is not connected")
             self.intersections[x][y] = 1
@@ -56,7 +75,6 @@ class Game:
                     # skip itself
                     if d_x == 0 and d_y == 0:
                         continue
-                    print("deltas: {}, {}".format(x+d_x, y+d_y))
                     if x + d_x >= 1 and x + d_x < self.num_grid \
                             and y + d_y >= 1 and y + d_y < self.num_grid and \
                             self.intersections[x+d_x][y+d_y] == 1:
@@ -96,11 +114,20 @@ class Game:
                 len(route), tunnel_length)
 
 
-if __name__ == "__main__":
-    optlist, args = getopt.getopt(sys.argv[1:], 'n:p:k:', [
-        'grid=', 'phase=', 'tunnel='])
-    num_grid, num_phase, tunnel_length = 0, 0, 0
+def establish_connection(port):
+    HOST = "localhost"
+    PORT = port
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((HOST, PORT))
+    s.listen(5)
+    return s
 
+
+if __name__ == "__main__":
+
+    optlist, args = getopt.getopt(sys.argv[1:], 'n:p:k:', [
+        'grid=', 'phase=', 'tunnel=', 'port='])
+    num_grid, num_phase, tunnel_length, port = 0, 0, 0, 8000
     for o, a in optlist:
         if o in ("-n", "--grid"):
             num_grid = int(a)
@@ -108,8 +135,28 @@ if __name__ == "__main__":
             num_phase = int(a)
         elif o in ("-k", "--tunnel"):
             tunnel_length = int(a)
+        elif o in ("--port"):
+            port = int(a)
         else:
             assert False, "unhandled option"
-    game = Game(num_grid, num_phase, tunnel_length)
 
+    game = Game(num_grid, num_phase, tunnel_length)
     game.load_tunnel()
+
+    server = establish_connection(port)
+    try:
+        (conn, address) = server.accept()
+        data = conn.recv(DATA_SIZE).decode()
+        if data:
+            game.set_player(data)
+
+        payload = {'grid': num_grid, 'remaining_phases': num_phase,
+                   'tunnel_length': tunnel_length, 'state': 'probe', 'result': []}
+        conn.sendall("hello".encode())
+
+    # while num_phase > 0:
+    #     data = json.loads(conn.recv(DATA_SIZE))
+    #     num_phase -= 1
+        server.close()
+    except (AttributeError, OSError, KeyboardInterrupt, RuntimeError, TypeError):
+        server.close()
