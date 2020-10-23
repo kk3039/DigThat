@@ -128,7 +128,7 @@ class Game:
         return len(self.detector.probes)
 
     def fill_in_grid(self):
-        f = open('tunnel_example', 'r')
+        f = open('tunnel', 'r')
         route = []
         node_set = []
         # fill in the grid

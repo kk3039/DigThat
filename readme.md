@@ -2,21 +2,47 @@
 
 #### Authors
 
-Victoria Lu <viclu at nyu.edu>
-Mandy Xu <xx414 at nyu.edu>
+Victoria Lu
+
+ viclu at nyu.edu
+
+Mandy Xu
+
+xx414 at nyu.edu
 
 #### Description
 
-The streets runs from 0 to num_grid for the convience of everyone.
+The streets runs from 1 to num_grid.
+Here's an example for 5x5 grid:
+5   +---+---+---+---+
+    |   |   ‖   |   |
+4   +---+---+---+---+
+    |   |   ‖   |   |
+3   +---+---+===+---+
+    |   |   |   ‖   |
+2   +---+---+===+---+
+    |   |   ‖   |   |
+1   +---+---+---+---+
+    1   2   3   4   5
+Double lines are the tunnels. The graph shows a tunnel that originates at (1,3) and ends at (5,3).
 
 #### System requirements
 
 Python 3.6.8
 
-#### How to run
+#### Structure
+The project consist of a server `game.py`, a program that produces the tunnel (e.g. `tunneler_example.py`), a program that detects the tunnel (e.g. `dectector_example.py`). `run_game.sh` passes down the arguments and runs the tunneler, follows by the game. The tunneler produces the tunnel in file named `tunnel` and `game.py` will look for `tunnel` and load it up. It then starts the server, waiting for the detector to join. Detector program should be triggered by `run_detect.sh`.
 
+
+#### How to run
 To start the game:
-should take in three params:
+`./run_game.sh 5 3 9` to run tunneler and start the game. Params are given in the order of num_grid, num_phases, tunnel_length. You can adjust this inside of the shell script.
+`./run_detect.sh` to start the detector. The detector will get params from the server.
+
+The given example is a simple tunnel with the detector guessing correctly. To see a failed example, rename `tunnel_example` to `tunnel` and rerun the game.
+
+##### Start server:
+
 `python3 game.py --grid 5 --phase 3 --tunnel 4`
 or use short args:
 `python3 game.py -n 5 -p 3 -k 4`
@@ -25,20 +51,24 @@ or use short args:
 `-p` or `--phase`: number of probing phases, including the last round of guessing phase. E.g. --phase 3 meaning two rounds of probing and the last one is guessing
 `-k` or `--tunnel`: length of tunnel. should be >= n-1
 
-Tunnelers:
-should take in three params:
+##### Tunneler
+Tunnelers should take in three params and produces `tunnel`. For example:
 `python3 tunneler_example.py --grid 5 --phase 3 --tunnel 4`
 or use short args:
 `python3 tunneler_example.py -n 2 -p 2 -k 1`
 
+##### Detector
+Detectors will receive params from the server.
+`python3 detector_example.py`
+
 #### What to hand in
+* Tunneler program (which should produce `tunnel`)
+* Detector program
+* ./run_game.sh that includes the commands to start tunneler
+* ./run_detector.sh that includes teh commands to start detector
 
-Code for Tunnel:
+**Tunneler program**
 Should take in three params: `--grid 5 --phase 3 --tunnel 4`
-Should output a file named `tunnel` that satisfies the following:
-
-- all intersection coordinates in order, starting from the bottom i.e. (1, y)
-- each coordinate should take one line, in the form of `x,y`
-- The last line should be (n+1, y), where n is the the number of grids
+Should output a file named `tunnel`. Each tunnel segment should take one line, in the form of `x1,y1 x2,y2` i.e. starting coordinates and ending coordinates should separate by a space.
 
 Please refer to tunnel_example file as a sample.

@@ -1,0 +1,1 @@
+python3 detector_example.py
