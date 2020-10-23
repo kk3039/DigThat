@@ -1,14 +1,13 @@
 import sys
 import getopt
-import random
 import math
 
 
 def build_tunnel(num_grid, tunnel_length, f):
     y = math.ceil(num_grid/2)
     # e.g. 6 grid means 7 streets
-    for i in range(1, num_grid+1):
-        f.write("{},{}\n".format(i, y))
+    for i in range(1, num_grid):
+        f.write("{},{} {},{}\n".format(i, y, i+1, y))
 
 
 if __name__ == "__main__":

@@ -29,10 +29,10 @@ class InputError(Error):
 class Detector:
     def __init__(self, name):
         self.name = name
-        self.num_probe = 0
+        self.probes = []
 
-    def update_probes(self, num_probe):
-        self.num_probe += num_probe
+    def update_probes(self, probes):
+        self.probes.extend(x for x in probes if x not in self.probes)
 
 
 class Game:
@@ -87,18 +87,19 @@ class Game:
     def set_player(self, name):
         self.detector = Detector(name)
 
-    def use_probes(self, num_probes):
-        self.detector.update_probes(num_probes)
+    def use_probes(self, probes):
+        self.detector.update_probes(probes)
 
     def check_answer(self, answers):
         self.num_phase -= 1
         is_answer_correct = True
 
-        guess_insec = []
-        guess_insec_neighbors = []
+        guess_insec = [
+            [0 for _ in range(self.num_grid+1)] for _ in range(self.num_grid+1)]
+        guess_insec_neighbors = {}
         for ([s_x, s_y], [e_x, e_y]) in answers:
-            start_node = [s_x, s_y]
-            end_node = [e_x, e_y]
+            start_node = (s_x, s_y)
+            end_node = (e_x, e_y)
             # fill in guess grid
             guess_insec[s_x][s_y] = 1
             guess_insec[e_x][e_y] = 1
@@ -115,14 +116,15 @@ class Game:
                 print("({},{}), ({},{}) is not part of the tunnel".format(
                     s_x, s_y, e_x, e_y))
                 is_answer_correct = False
+        print("Detector's guess")
         self.draw_grid(guess_insec, guess_insec_neighbors)
-        if len(answers) != tunnel_length:
+        if len(answers) != len(self.route):
             is_answer_correct = False
             print("answer is shorter than tunnel")
         elif not is_answer_correct:
             print("answer is not correct")
             return sys.maxsize
-        return self.detector.num_probe
+        return len(self.detector.probes)
 
     def fill_in_grid(self):
         f = open('tunnel', 'r')
@@ -202,7 +204,7 @@ class Game:
         self.num_phase -= 1
         if self.num_phase == 1:
             self.curr_phase = GUESS_PHASE
-
+        self.use_probes(probes)
         report = []
         for [x, y] in probes:
             if self.intersections[x][y] == 1:
@@ -267,36 +269,36 @@ if __name__ == '__main__':
     game = Game(num_grid, num_phase, tunnel_length)
     game.load_tunnel()
 
-    # conn = establish_connection(port)
-    # try:
-    #     data = receive_data(conn)
-    #     if data:
-    #         print(data)
-    #         game.set_player(data['player_name'])
-    #     # game info
+    conn = establish_connection(port)
+    try:
+        data = receive_data(conn)
+        if data:
+            print(data)
+            game.set_player(data['player_name'])
+        # game info
 
-    #     payload = game.get_info()
-    #     send_data(conn, payload)
+        payload = game.get_info()
+        send_data(conn, payload)
 
-    #     # begin timer here
-    #     # probing phase
-    #     signal.signal(signal.SIGALRM, alarm_handler)
-    #     signal.alarm(TIME_LIMIT)
-    #     while not game.isEnded():
-    #         print("phase {}".format(num_phase - game.num_phase + 1))
-    #         req = receive_data(conn)
-    #         if game.num_phase > 1 and req['phase'] == PROBE_PHASE:
-    #             prob_result = game.investigate(req['probes'])
-    #             payload = game.get_info(prob_result)
-    #             send_data(conn, payload)
-    #         elif req['phase'] == GUESS_PHASE:
-    #             score = game.check_answer(req['answer'])
-    #             print("player {} got score {}".format(
-    #                 game.detector.name, score))
-    #         else:
-    #             assert False, "This is the guessing round"
+        # begin timer here
+        # probing phase
+        signal.signal(signal.SIGALRM, alarm_handler)
+        signal.alarm(TIME_LIMIT)
+        while not game.isEnded():
+            print("phase {}".format(num_phase - game.num_phase + 1))
+            req = receive_data(conn)
+            if game.num_phase > 1 and req['phase'] == PROBE_PHASE:
+                prob_result = game.investigate(req['probes'])
+                payload = game.get_info(prob_result)
+                send_data(conn, payload)
+            elif req['phase'] == GUESS_PHASE:
+                score = game.check_answer(req['answer'])
+                print("player {} got score {}".format(
+                    game.detector.name, score))
+            else:
+                assert False, "This is the guessing round"
 
-    #     conn.close()
-    # except Error as e:
-    #     print(e)
-    #     conn.close()
+        conn.close()
+    except Error as e:
+        print(e)
+        conn.close()
