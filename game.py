@@ -15,8 +15,10 @@ class Error(Exception):
     """Base class for exceptions in this module."""
     pass
 
+
 class TimeOutException(Exception):
-   pass
+    pass
+
 
 class InputError(Error):
     def __init__(self, expression, message):
@@ -53,26 +55,29 @@ class Game:
         self.intersections = [
             [0 for _ in range(self.num_grid+1)] for _ in range(self.num_grid+1)]
         self.intersection_neighbors = {}
+        self.route = []
+        self.node_set = []
 
-    def draw_grid(self):
+    def draw_grid(self, insec, insec_neighbors):
         grid = ''
-        for i in reversed(range(1,self.num_grid+1)):
+        for i in reversed(range(1, self.num_grid+1)):
             row = '\n+'
             col = '\n'
-            for j in range(1,self.num_grid+1):
-                if j < self.num_grid:
-                    if self.intersections[i][j] == 1 and self.intersections[i][j-1] ==1:
-                        row += '===+'
-                    else:
-                        row+= '---+' 
+            for j in range(1, self.num_grid+1):
                 # don't draw columns after the last row
                 if i > 1:
-                    if self.intersections[i][j] == 1 and self.intersections[i-1][j] ==1:
+                    if insec[i][j] == 1 and (i-1, j) in insec_neighbors.get((i, j)):
                         col += '‖   '
                     else:
                         col += '|   '
-            grid+=row
-            grid+=col
+                if j < self.num_grid:
+                    if insec[i][j] == 1 and (i, j+1) in insec_neighbors.get((i, j)):
+                        row += '===+'
+                    else:
+                        row += '---+'
+
+            grid += row
+            grid += col
 
         print(grid)
 
@@ -88,22 +93,41 @@ class Game:
     def check_answer(self, answers):
         self.num_phase -= 1
         is_answer_correct = True
-        if len(answers) - 1 != tunnel_length:
-            is_answer_correct = False
-        for [x, y] in answers:
-            if self.intersections[x][y] != 1:
-                print("({},{}) is not part of the tunnel".format(x, y))
+
+        guess_insec = []
+        guess_insec_neighbors = []
+        for ([s_x, s_y], [e_x, e_y]) in answers:
+            start_node = [s_x, s_y]
+            end_node = [e_x, e_y]
+            # fill in guess grid
+            guess_insec[s_x][s_y] = 1
+            guess_insec[e_x][e_y] = 1
+            if start_node not in guess_insec_neighbors:
+                guess_insec_neighbors[start_node] = []
+            if end_node not in guess_insec_neighbors:
+                guess_insec_neighbors[end_node] = []
+            guess_insec_neighbors.get(start_node).append(end_node)
+            guess_insec_neighbors.get(end_node).append(start_node)
+
+            # check with tunnel grid
+            if self.intersections[s_x][s_y] != 1 or \
+                    (e_x, e_y) not in self.intersection_neighbors.get((s_x, s_y)):
+                print("({},{}), ({},{}) is not part of the tunnel".format(
+                    s_x, s_y, e_x, e_y))
                 is_answer_correct = False
-        if not is_answer_correct:
+        self.draw_grid(guess_insec, guess_insec_neighbors)
+        if len(answers) != tunnel_length:
+            is_answer_correct = False
+            print("answer is shorter than tunnel")
+        elif not is_answer_correct:
             print("answer is not correct")
             return sys.maxsize
         return self.detector.num_probe
 
-    def load_tunnel(self):
+    def fill_in_grid(self):
         f = open('tunnel', 'r')
-        prev = None
         route = []
-
+        node_set = []
         # fill in the grid
         for line in f:
             start, end = line.split(' ')
@@ -113,45 +137,66 @@ class Game:
             s_y = int(str_s_y)
             e_x = int(str_e_x)
             e_y = int(str_e_y)
-            route.append([(s_x, s_y), (e_x, e_y)])
+            start_node = (s_x, s_y)
+            end_node = (e_x, e_y)
+            route.append([start_node, end_node])
+            if start_node not in node_set:
+                node_set.append(start_node)
+            if end_node not in node_set:
+                node_set.append(end_node)
 
             self.intersections[s_x][s_y] = 1
             self.intersections[e_x][e_y] = 1
-
+            if start_node not in self.intersection_neighbors:
+                self.intersection_neighbors[start_node] = []
+            if end_node not in self.intersection_neighbors:
+                self.intersection_neighbors[end_node] = []
+            self.intersection_neighbors.get(start_node).append(end_node)
+            self.intersection_neighbors.get(end_node).append(start_node)
+        self.route = route
+        self.node_set = node_set
         print(route)
 
-        for i in range(1,self.num_grid+1):
-            for j in range(1,self.num_grid+1):
-                if self.intersections[i][j] ==1:
-                    # look left, add to neighbor map
-                    # look right, add to neighbor map
-        
-        if len(route) > tunnel_length:
+    def validate_tunnel(self):
+        if len(self.route) > tunnel_length:
             assert False, 'tunnel route is of length {}, longer than the limit of {}'.format(
-                len(route), tunnel_length)
+                len(self.route), tunnel_length)
         # validations
-            # at least one point in (1,x) shoule be occupied
-        if route[0][0] != 1:
-            assert False, 'Starting point {} should be at index 1, i.e. (1,x)'.format(
-                route[0][0])
-            # at least one point in (n,x) shoule be occupied
-        if route[-1][0] != self.num_grid:
-            assert False, 'Ending point {} should be at index {}, i.e. ({},x)'.format(
-                route[-1][0],  self.num_grid,  self.num_grid)
-            # only two points can have only one neighbor. These two points must be (1,x) and (5,x)
-        if len(self.intersection_neighbors.get(route[0])) != 1:
-            assert False, 'Starting point {} should only have one neighboring intersection.\
-                 Current neighbors: {}'.format(route[0], self.intersection_neighbors.get(route[0]))
-        if len(self.intersection_neighbors.get(route[-1])) != 1:
-            assert False, 'Ending point should only have one neighboring intersection.'
+        # at least one point in (1,x) shoule be occupied
+        south_street_occupancy = list(filter(
+            lambda x: x == 1, self.intersections[1]))
+        north_street_occupancy = list(filter(
+            lambda x: x == 1, self.intersections[-1]))
+        if len(south_street_occupancy) < 1:
+            assert False, 'Origin should start from the south, i.e. (1,x)'
+        # at least one point in (n,x) shoule be occupied
+        if len(north_street_occupancy) < 1:
+            assert False, 'Destination should end at the north, i.e. (n,x)'
 
-            # the rest of neighbor map should have two neighbors, or else it's dead end or part of a loop
-        for i in route[2:-1]:
+        # Only two points can have only one neighbor. These two points must be (1,x) and (n,x)
+        # The rest of neighbor map should have two neighbors, or else it's dead end or part of a loop
+        origin = None
+        destination = None
+        for i in self.node_set:
             if len(self.intersection_neighbors.get(i)) != 2:
-                assert False, 'Intersection {} has only one or more than 2 neighbors. \
-                    Current neighbots: {}'.format(i, self.intersection_neighbors.get(i))
-            
+                # only two points can have only one neighbor. These two points must be (1,x) and (n,x)
+                if i[0] == 1 and origin is None:
+                    origin = i
+                elif i[0] == num_grid and destination is None:
+                    destination = i
+                else:
+                    assert False, 'Intersection {} might be part of a loop or a deadend. \
+                        Current neighbors: {}'.format(i, self.intersection_neighbors.get(i))
+        if origin is None or destination is None:
+            assert False, 'Cannot find origin or destination. Detected origin as {}, \
+                destination as {}'.format(origin, destination)
+        print(self.intersection_neighbors)
 
+    def load_tunnel(self):
+
+        self.fill_in_grid()
+        self.draw_grid(self.intersections, self.intersection_neighbors)
+        self.validate_tunnel()
 
     def investigate(self, probes):
         self.num_phase -= 1
@@ -196,9 +241,11 @@ def receive_data(conn):
 def send_data(conn, data):
     conn.sendall(json.dumps(data).encode())
 
+
 def alarm_handler(signum, frame):
     print("Detector exceeds time limit")
     raise TimeOutException()
+
 
 if __name__ == '__main__':
 
@@ -219,7 +266,7 @@ if __name__ == '__main__':
 
     game = Game(num_grid, num_phase, tunnel_length)
     game.load_tunnel()
-    game.draw_grid()
+
     # conn = establish_connection(port)
     # try:
     #     data = receive_data(conn)
