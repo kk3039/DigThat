@@ -104,55 +104,54 @@ class Game:
         prev = None
         route = []
 
-        # form the map
+        # fill in the grid
         for line in f:
-            str_x, str_y = line.split(',')
-            x = int(str_x)
-            y = int(str_y)
-            route.append((x, y))
+            start, end = line.split(' ')
+            str_s_x, str_s_y = start.split(',')
+            str_e_x, str_e_y = end.split(',')
+            s_x = int(str_s_x)
+            s_y = int(str_s_y)
+            e_x = int(str_e_x)
+            e_y = int(str_e_y)
+            route.append([(s_x, s_y), (e_x, e_y)])
 
-            if prev is not None and not (abs(prev[0] - x) ^ abs(prev[1] - y)):
-                raise InputError((x, y), 'tunnel is not connected')
-            self.intersections[x][y] = 1
-            self.intersection_neighbors[(x, y)] = []
-            # look for existing neighbors and set neighbor map
-            for (d_x, d_y) in [(-1,0),(1,0),(0,-1),(0,1)]:
-                    if x + d_x >= 1 and x + d_x < self.num_grid \
-                            and y + d_y >= 1 and y + d_y < self.num_grid and \
-                            self.intersections[x+d_x][y+d_y] == 1:
-                        if (x + d_x, y + d_y) not in self.intersection_neighbors:
-                            self.intersection_neighbors[(
-                                x + d_x, y + d_y)] = []
-                        neighbor_node_neighbors = self.intersection_neighbors.get(
-                            (x + d_x, y + d_y))
-                        neighbor_node_neighbors.append((x, y))
-                        curr_node_neighbors = self.intersection_neighbors.get(
-                            (x, y))
-                        curr_node_neighbors.append(
-                            (x + d_x, y + d_y))
+            self.intersections[s_x][s_y] = 1
+            self.intersections[e_x][e_y] = 1
 
-            prev = (x, y)
         print(route)
+
+        for i in range(1,self.num_grid+1):
+            for j in range(1,self.num_grid+1):
+                if self.intersections[i][j] ==1:
+                    # look left, add to neighbor map
+                    # look right, add to neighbor map
+        
+        if len(route) > tunnel_length:
+            assert False, 'tunnel route is of length {}, longer than the limit of {}'.format(
+                len(route), tunnel_length)
         # validations
+            # at least one point in (1,x) shoule be occupied
         if route[0][0] != 1:
             assert False, 'Starting point {} should be at index 1, i.e. (1,x)'.format(
                 route[0][0])
+            # at least one point in (n,x) shoule be occupied
         if route[-1][0] != self.num_grid:
             assert False, 'Ending point {} should be at index {}, i.e. ({},x)'.format(
                 route[-1][0],  self.num_grid,  self.num_grid)
-
+            # only two points can have only one neighbor. These two points must be (1,x) and (5,x)
         if len(self.intersection_neighbors.get(route[0])) != 1:
             assert False, 'Starting point {} should only have one neighboring intersection.\
                  Current neighbors: {}'.format(route[0], self.intersection_neighbors.get(route[0]))
         if len(self.intersection_neighbors.get(route[-1])) != 1:
             assert False, 'Ending point should only have one neighboring intersection.'
+
+            # the rest of neighbor map should have two neighbors, or else it's dead end or part of a loop
         for i in route[2:-1]:
             if len(self.intersection_neighbors.get(i)) != 2:
                 assert False, 'Intersection {} has only one or more than 2 neighbors. \
                     Current neighbots: {}'.format(i, self.intersection_neighbors.get(i))
-        if len(route) - 1 > tunnel_length:
-            assert False, 'tunnel route is of length {}, longer than the limit of {}'.format(
-                len(route), tunnel_length)
+            
+
 
     def investigate(self, probes):
         self.num_phase -= 1
