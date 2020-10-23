@@ -67,7 +67,7 @@ if __name__ == '__main__':
             if res['next_phase'] == 'guess':
                 break
         payload = {'phase': 'guess', 'answer': [
-            [(1, 3), (2, 3)], [(2, 3), (3, 3)], [(3, 3), (4, 3)], [(4, 3), (5, 3)]]}
+            [[1, 3], [2, 3]], [[2, 3], [3, 3]], [[3, 3], [4, 3]], [[4, 3], [5, 3]]]}
         send_data(s, payload)
         s.close()
     except KeyboardInterrupt:
