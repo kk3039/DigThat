@@ -54,6 +54,28 @@ class Game:
             [0 for _ in range(self.num_grid+1)] for _ in range(self.num_grid+1)]
         self.intersection_neighbors = {}
 
+    def draw_grid(self):
+        grid = ''
+        for i in reversed(range(1,self.num_grid+1)):
+            row = '\n+'
+            col = '\n'
+            for j in range(1,self.num_grid+1):
+                if j < self.num_grid:
+                    if self.intersections[i][j] == 1 and self.intersections[i][j-1] ==1:
+                        row += '===+'
+                    else:
+                        row+= '---+' 
+                # don't draw columns after the last row
+                if i > 1:
+                    if self.intersections[i][j] == 1 and self.intersections[i-1][j] ==1:
+                        col += '‖   '
+                    else:
+                        col += '|   '
+            grid+=row
+            grid+=col
+
+        print(grid)
+
     def isEnded(self):
         return self.num_phase <= 0
 
@@ -89,16 +111,12 @@ class Game:
             y = int(str_y)
             route.append((x, y))
 
-            if prev is not None and not abs(prev[0] - x) ^ abs(prev[1] - y):
+            if prev is not None and not (abs(prev[0] - x) ^ abs(prev[1] - y)):
                 raise InputError((x, y), 'tunnel is not connected')
             self.intersections[x][y] = 1
             self.intersection_neighbors[(x, y)] = []
             # look for existing neighbors and set neighbor map
-            for d_x in [-1, 0, 1]:
-                for d_y in [-1, 0, 1]:
-                    # skip itself
-                    if d_x == 0 and d_y == 0:
-                        continue
+            for (d_x, d_y) in [(-1,0),(1,0),(0,-1),(0,1)]:
                     if x + d_x >= 1 and x + d_x < self.num_grid \
                             and y + d_y >= 1 and y + d_y < self.num_grid and \
                             self.intersections[x+d_x][y+d_y] == 1:
@@ -114,7 +132,7 @@ class Game:
                             (x + d_x, y + d_y))
 
             prev = (x, y)
-
+        print(route)
         # validations
         if route[0][0] != 1:
             assert False, 'Starting point {} should be at index 1, i.e. (1,x)'.format(
@@ -124,13 +142,14 @@ class Game:
                 route[-1][0],  self.num_grid,  self.num_grid)
 
         if len(self.intersection_neighbors.get(route[0])) != 1:
-            assert False, 'Starting point should only have one neighboring intersection.'
+            assert False, 'Starting point {} should only have one neighboring intersection.\
+                 Current neighbors: {}'.format(route[0], self.intersection_neighbors.get(route[0]))
         if len(self.intersection_neighbors.get(route[-1])) != 1:
             assert False, 'Ending point should only have one neighboring intersection.'
         for i in route[2:-1]:
             if len(self.intersection_neighbors.get(i)) != 2:
                 assert False, 'Intersection {} has only one or more than 2 neighbors. \
-                    Please check if it is dead end or part of a loop'.format(route[i])
+                    Current neighbots: {}'.format(i, self.intersection_neighbors.get(i))
         if len(route) - 1 > tunnel_length:
             assert False, 'tunnel route is of length {}, longer than the limit of {}'.format(
                 len(route), tunnel_length)
@@ -201,37 +220,37 @@ if __name__ == '__main__':
 
     game = Game(num_grid, num_phase, tunnel_length)
     game.load_tunnel()
+    game.draw_grid()
+    # conn = establish_connection(port)
+    # try:
+    #     data = receive_data(conn)
+    #     if data:
+    #         print(data)
+    #         game.set_player(data['player_name'])
+    #     # game info
 
-    conn = establish_connection(port)
-    try:
-        data = receive_data(conn)
-        if data:
-            print(data)
-            game.set_player(data['player_name'])
-        # game info
+    #     payload = game.get_info()
+    #     send_data(conn, payload)
 
-        payload = game.get_info()
-        send_data(conn, payload)
+    #     # begin timer here
+    #     # probing phase
+    #     signal.signal(signal.SIGALRM, alarm_handler)
+    #     signal.alarm(TIME_LIMIT)
+    #     while not game.isEnded():
+    #         print("phase {}".format(num_phase - game.num_phase + 1))
+    #         req = receive_data(conn)
+    #         if game.num_phase > 1 and req['phase'] == PROBE_PHASE:
+    #             prob_result = game.investigate(req['probes'])
+    #             payload = game.get_info(prob_result)
+    #             send_data(conn, payload)
+    #         elif req['phase'] == GUESS_PHASE:
+    #             score = game.check_answer(req['answer'])
+    #             print("player {} got score {}".format(
+    #                 game.detector.name, score))
+    #         else:
+    #             assert False, "This is the guessing round"
 
-        # begin timer here
-        # probing phase
-        signal.signal(signal.SIGALRM, alarm_handler)
-        signal.alarm(TIME_LIMIT)
-        while not game.isEnded():
-            print("phase {}".format(num_phase - game.num_phase + 1))
-            req = receive_data(conn)
-            if game.num_phase > 1 and req['phase'] == PROBE_PHASE:
-                prob_result = game.investigate(req['probes'])
-                payload = game.get_info(prob_result)
-                send_data(conn, payload)
-            elif req['phase'] == GUESS_PHASE:
-                score = game.check_answer(req['answer'])
-                print("player {} got score {}".format(
-                    game.detector.name, score))
-            else:
-                assert False, "This is the guessing round"
-
-        conn.close()
-    except Error as e:
-        print(e)
-        conn.close()
+    #     conn.close()
+    # except Error as e:
+    #     print(e)
+    #     conn.close()
