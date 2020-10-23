@@ -121,13 +121,14 @@ class Game:
         if len(answers) != len(self.route):
             is_answer_correct = False
             print("answer is shorter than tunnel")
+            return sys.maxsize
         elif not is_answer_correct:
             print("answer is not correct")
             return sys.maxsize
         return len(self.detector.probes)
 
     def fill_in_grid(self):
-        f = open('tunnel', 'r')
+        f = open('tunnel_example', 'r')
         route = []
         node_set = []
         # fill in the grid
@@ -273,7 +274,6 @@ if __name__ == '__main__':
     try:
         data = receive_data(conn)
         if data:
-            print(data)
             game.set_player(data['player_name'])
         # game info
 
@@ -289,6 +289,9 @@ if __name__ == '__main__':
             req = receive_data(conn)
             if game.num_phase > 1 and req['phase'] == PROBE_PHASE:
                 prob_result = game.investigate(req['probes'])
+                print('Detector probes: {}'.format(req['probes']))
+                print('Probe report: {}'.format(prob_result))
+                print('\n')
                 payload = game.get_info(prob_result)
                 send_data(conn, payload)
             elif req['phase'] == GUESS_PHASE:
