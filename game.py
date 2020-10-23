@@ -2,7 +2,10 @@ import sys
 import getopt
 import json
 import socket
+import signal
+import time
 
+TIME_LIMIT = 120
 DATA_SIZE = 4096
 PROBE_PHASE = 'probe'
 GUESS_PHASE = 'guess'
@@ -12,6 +15,8 @@ class Error(Exception):
     """Base class for exceptions in this module."""
     pass
 
+class TimeOutException(Exception):
+   pass
 
 class InputError(Error):
     def __init__(self, expression, message):
@@ -109,8 +114,6 @@ class Game:
                             (x + d_x, y + d_y))
 
             prev = (x, y)
-        # print(route)
-        # print(self.intersection_neighbors)
 
         # validations
         if route[0][0] != 1:
@@ -175,6 +178,9 @@ def receive_data(conn):
 def send_data(conn, data):
     conn.sendall(json.dumps(data).encode())
 
+def alarm_handler(signum, frame):
+    print("Detector exceeds time limit")
+    raise TimeOutException()
 
 if __name__ == '__main__':
 
@@ -207,8 +213,10 @@ if __name__ == '__main__':
         payload = game.get_info()
         send_data(conn, payload)
 
-        # probing phase
         # begin timer here
+        # probing phase
+        signal.signal(signal.SIGALRM, alarm_handler)
+        signal.alarm(TIME_LIMIT)
         while not game.isEnded():
             print("phase {}".format(num_phase - game.num_phase + 1))
             req = receive_data(conn)
