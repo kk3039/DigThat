@@ -27,7 +27,7 @@ Here's an example for 5x5 grid:
 1   +---+---+---+---+
     1   2   3   4   5
 ```
-Double lines are the tunnels. The graph shows a tunnel that originates at (1,3) and ends at (5,3).
+Double lines are the tunnels. The graph shows a tunnel that originates at (1,3) and ends at (5,3). The coordinate format is (row, col).
 
 #### System requirements
 
@@ -74,8 +74,8 @@ The server will send:
 {'grid': number of grid,
  'remaining_phases': number of remaining phases,
  'tunnel_length': tunnel length,
- 'curr_phase': probe or guess,
- 'next_phase': probe or guess; guess if the next is the last round
+ 'curr_phase': 'probe' or 'guess',
+ 'next_phase': 'probe' or 'guess'; 'guess' if the next is the last round
  'result': probe report if any probe detects a tunnel. If no probe is correct, will return an empty array
 }
 ```
@@ -95,11 +95,14 @@ In probe phase:
 ```
 {'phase': 'probe', 'probes': [[3, 3], [4, 4]]}
 ```
+`probes` field is a list of intersection coordinates to be probed. If there is still probing phases but player do not want to put probes, use empty array to skip the round or just directly go into the guess phase by using the format below. Please note that once a player starts to guess, s/he may not go back to probing phase any more.
+
 In guess phase:
 ```
 {'phase': 'guess', 'answer': [
             [[1, 3], [2, 3]], [[2, 3], [3, 3]], [[3, 3], [4, 3]], [[4, 3], [5, 3]]]}
 ```
+The `answer` field is a list of tunnel segments. One segment is defined by two intersection coordinates, in the format of `[[x1, y1], [x2, y2]]`
 #### What to hand in
 * Tunneler program (which should produce `tunnel`)
 * Detector program
