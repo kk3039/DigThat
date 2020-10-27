@@ -29,6 +29,24 @@ Here's an example for 5x5 grid:
 ```
 Double lines are the tunnels. The graph shows a tunnel that originates at (1,3) and ends at (5,3). The coordinate format is (row, col).
 
+When the detector puts probes, you will see a graph revealing the tunnel:
+```
++---O---+---+---+---+---+
+|   |   |   ‖   |   |   |
++---+---+===O---+---O---+
+|   |   |   |   |   |   |
++---+---+---+---+---+---+
+|   |   |   |   |   |   |
++---O---+---+---+---+---+
+|   |   |   |   |   |   |
++---O---+---+---O---+---+
+|   |   |   ‖   |   |   |
++---+---+===O---O---+---+
+|   |   |   |   |   |   |
++---+---+---+---+---O---+
+```
+where circles are probed intersections, and the tunnels will be revealed if guessed correctly.
+
 #### System requirements
 
 Python 3.6.8
@@ -113,6 +131,8 @@ The `answer` field is a list of tunnel segments. One segment is defined by two i
 Should take in three params: `--grid 5 --phase 3 --tunnel 4` \
 Should output a file named `tunnel`. Each tunnel segment should take one line, in the form of `x1,y1 x2,y2` i.e. starting coordinates and ending coordinates should separate by a space.
 
-Please refer to tunnel_example file as a sample.
+Please refer to tunnel_example file as a sample. To run game with `tunnel_example`, change `game.py` to read from this file instead of `tunnel` and run `./run_game.sh 7 5 9`, for instance.
+
+
 
 

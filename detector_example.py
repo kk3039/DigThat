@@ -56,7 +56,7 @@ if __name__ == '__main__':
             payload = {'phase': 'probe', 'probes': []}
             for i in range(3):
                 x = math.ceil(random.random() * (num_grid))
-                y = x = math.ceil(random.random() * (num_grid))
+                y = math.floor(random.random() * (num_grid))
                 if [x, y] not in payload['probes']:
                     # for the ease of decoding, please avoid using python tuples
                     payload['probes'].append([x, y])

@@ -27,12 +27,48 @@ class InputError(Error):
 
 
 class Detector:
-    def __init__(self, name):
+    def __init__(self, name, num_grid):
         self.name = name
         self.probes = []
+        self.probe_map = [
+            [0 for _ in range(num_grid+1)] for _ in range(num_grid+1)]
 
     def update_probes(self, probes):
         self.probes.extend(x for x in probes if x not in self.probes)
+        for (px, py) in probes:
+            self.probe_map[px][py] = 1
+
+    def draw_probes(self, intersections, insec_neighbors, num_grid):
+        grid = ''
+        for i in reversed(range(1, num_grid+1)):
+            row = '\n'
+            col = '\n'
+            for j in range(1, num_grid+1):
+                # don't draw columns after the last row
+                if i > 1:
+                    if (self.probe_map[i][j] == 1 or self.probe_map[i-1][j] == 1) \
+                            and intersections[i][j] == 1 \
+                            and (i-1, j) in insec_neighbors.get((i, j)):
+                        col += '‖   '
+                    else:
+                        col += '|   '
+
+                if self.probe_map[i][j] == 1:
+                    row += 'O'
+                else:
+                    row += '+'
+                if j < num_grid:
+                    if (self.probe_map[i][j] == 1 or self.probe_map[i][j+1] == 1) \
+                            and intersections[i][j] == 1 \
+                            and (i, j+1) in insec_neighbors.get((i, j)):
+                        row += '==='
+                    else:
+                        row += '---'
+
+            grid += row
+            grid += col
+
+        print(grid)
 
 
 class Game:
@@ -85,7 +121,7 @@ class Game:
         return self.num_phase <= 0
 
     def set_player(self, name):
-        self.detector = Detector(name)
+        self.detector = Detector(name, self.num_grid)
 
     def use_probes(self, probes):
         self.detector.update_probes(probes)
@@ -128,7 +164,7 @@ class Game:
         return len(self.detector.probes)
 
     def fill_in_grid(self):
-        f = open('tunnel', 'r')
+        f = open('tunnel_example', 'r')
         route = []
         node_set = []
         # fill in the grid
@@ -211,7 +247,8 @@ class Game:
             if self.intersections[x][y] == 1:
                 report.append(
                     {'[{},{}]'.format(x, y): self.intersection_neighbors.get((x, y))})
-
+        self.detector.draw_probes(
+            self.intersections, self.intersection_neighbors, self.num_grid)
         return report
 
     def get_info(self, result=[]):
